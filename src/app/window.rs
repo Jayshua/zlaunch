@@ -28,12 +28,13 @@ pub fn create_and_show_window(
     items.extend(applications.into_iter().map(ListItem::Application));
     // Get display size - try displays() first, then primary_display(), then use huge fallback
     // The layer shell will clamp to actual screen size, so overshooting is fine
-    let display_size = cx
-        .displays()
-        .first()
-        .map(|d| d.bounds().size)
-        .or_else(|| cx.primary_display().map(|d| d.bounds().size))
-        .unwrap_or_else(|| size(px(7680.0), px(4320.0))); // 8K fallback - will be clamped
+    //let display_size = cx
+    //    .displays()
+    //    .first()
+    //    .map(|d| d.bounds().size)
+    //    .or_else(|| cx.primary_display().map(|d| d.bounds().size))
+    //    .unwrap_or_else(|| size(px(7680.0), px(4320.0))); // 8K fallback - will be clamped
+    let display_size = size(px(7680.0), px(4320.0));
 
     let fullscreen_bounds = Bounds {
         origin: point(px(0.0), px(0.0)),
