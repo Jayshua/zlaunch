@@ -9,4 +9,5 @@ pub mod desktop;
 pub mod emoji;
 pub mod ipc;
 pub mod items;
+pub mod search;
 pub mod ui;

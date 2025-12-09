@@ -91,22 +91,23 @@ impl KwinCompositor {
 
         // Try to get window classes with wmctrl -lx
         if let Ok(output) = Command::new("wmctrl").args(["-lx"]).output()
-            && output.status.success() {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                for line in stdout.lines() {
-                    let parts: Vec<&str> = line.split_whitespace().collect();
-                    if parts.len() >= 4 {
-                        let window_id = parts[0];
-                        let class_parts: Vec<&str> = parts[2].split('.').collect();
-                        let class = class_parts.last().unwrap_or(&"").to_string();
+            && output.status.success()
+        {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            for line in stdout.lines() {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 4 {
+                    let window_id = parts[0];
+                    let class_parts: Vec<&str> = parts[2].split('.').collect();
+                    let class = class_parts.last().unwrap_or(&"").to_string();
 
-                        // Update the window with its class
-                        if let Some(win) = windows.iter_mut().find(|w| w.address == window_id) {
-                            win.class = class;
-                        }
+                    // Update the window with its class
+                    if let Some(win) = windows.iter_mut().find(|w| w.address == window_id) {
+                        win.class = class;
                     }
                 }
             }
+        }
 
         Ok(windows)
     }

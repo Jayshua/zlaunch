@@ -86,24 +86,25 @@ impl ClipboardItem {
     pub fn is_previewable_file(&self) -> bool {
         if let ClipboardContent::FilePaths(paths) = &self.content
             && paths.len() == 1
-                && let Some(ext) = paths[0].extension().and_then(|e| e.to_str()) {
-                    return matches!(
-                        ext,
-                        "txt"
-                            | "md"
-                            | "rs"
-                            | "py"
-                            | "js"
-                            | "ts"
-                            | "json"
-                            | "yaml"
-                            | "yml"
-                            | "toml"
-                            | "html"
-                            | "css"
-                            | "sh"
-                    );
-                }
+            && let Some(ext) = paths[0].extension().and_then(|e| e.to_str())
+        {
+            return matches!(
+                ext,
+                "txt"
+                    | "md"
+                    | "rs"
+                    | "py"
+                    | "js"
+                    | "ts"
+                    | "json"
+                    | "yaml"
+                    | "yml"
+                    | "toml"
+                    | "html"
+                    | "css"
+                    | "sh"
+            );
+        }
         false
     }
 }

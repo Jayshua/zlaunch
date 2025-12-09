@@ -25,9 +25,10 @@ pub fn add_item(content: ClipboardContent) {
 
     // Don't add duplicate consecutive items
     if let Some(last) = history.front()
-        && is_same_content(&last.content, &content) {
-            return;
-        }
+        && is_same_content(&last.content, &content)
+    {
+        return;
+    }
 
     let item = ClipboardItem::new(content);
     history.push_front(item);

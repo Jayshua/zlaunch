@@ -1,5 +1,6 @@
 use crate::calculator::{evaluate_expression, looks_like_expression};
-use crate::items::{ActionItem, CalculatorItem, ListItem, SubmenuItem};
+use crate::items::{ActionItem, CalculatorItem, ListItem, SearchItem, SubmenuItem};
+use crate::search::{SearchDetection, detect_search, get_providers};
 use crate::ui::items::render_item;
 use crate::ui::theme::theme;
 use fuzzy_matcher::FuzzyMatcher;
@@ -12,6 +13,8 @@ use std::sync::Arc;
 /// Section information for the list.
 #[derive(Clone, Debug, Default)]
 pub struct SectionInfo {
+    /// Number of search items in filtered results
+    pub search_count: usize,
     /// Number of windows in filtered results
     pub window_count: usize,
     /// Number of commands (submenus and actions) in filtered results
@@ -24,6 +27,7 @@ pub struct SectionInfo {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum SectionType {
     Calculator,
+    Search,
     Windows,
     Commands,
     Applications,
@@ -38,6 +42,8 @@ pub struct ItemListDelegate {
     query: String,
     /// Calculator result shown at the top when the query is a math expression.
     calculator_item: Option<CalculatorItem>,
+    /// Search items shown when query triggers search or when no matches found.
+    search_items: Vec<SearchItem>,
     on_confirm: Option<Arc<dyn Fn(&ListItem) + Send + Sync>>,
     on_cancel: Option<Arc<dyn Fn() + Send + Sync>>,
 }
@@ -72,6 +78,7 @@ impl ItemListDelegate {
             selected_index: if len > 0 { Some(0) } else { None },
             query: String::new(),
             calculator_item: None,
+            search_items: Vec::new(),
             on_confirm: None,
             on_cancel: None,
         }
@@ -149,10 +156,17 @@ impl ItemListDelegate {
             // Evaluate calculator expression
             self.calculator_item = self.try_evaluate_calculator(&query);
 
+            // Generate search items
+            let has_matches = !indices.is_empty();
+            self.search_items = self.try_generate_search_items(&query, has_matches);
+
             self.section_info = Self::compute_section_info(&self.items, &indices);
+            self.section_info.search_count = self.search_items.len();
             self.filtered_indices = indices;
 
-            let has_items = self.calculator_item.is_some() || !self.filtered_indices.is_empty();
+            let has_items = self.calculator_item.is_some()
+                || !self.search_items.is_empty()
+                || !self.filtered_indices.is_empty();
             self.selected_index = if has_items { Some(0) } else { None };
         }
     }
@@ -162,10 +176,18 @@ impl ItemListDelegate {
         self.calculator_item = self.try_evaluate_calculator(&self.query.clone());
 
         self.filtered_indices = Self::filter_items_sync(&self.items, &self.query);
+
+        // Generate search items
+        let has_matches = !self.filtered_indices.is_empty();
+        self.search_items = self.try_generate_search_items(&self.query, has_matches);
+
         self.section_info = Self::compute_section_info(&self.items, &self.filtered_indices);
+        self.section_info.search_count = self.search_items.len();
 
         // Set selection: calculator at 0 if present, otherwise first filtered item
-        let has_items = self.calculator_item.is_some() || !self.filtered_indices.is_empty();
+        let has_items = self.calculator_item.is_some()
+            || !self.search_items.is_empty()
+            || !self.filtered_indices.is_empty();
         self.selected_index = if has_items { Some(0) } else { None };
     }
 
@@ -178,29 +200,69 @@ impl ItemListDelegate {
         evaluate_expression(query).map(CalculatorItem::from_calc_result)
     }
 
+    /// Generate search items based on the query and current filter state.
+    fn try_generate_search_items(&self, query: &str, has_matches: bool) -> Vec<SearchItem> {
+        // Don't show search items if calculator is active
+        if self.calculator_item.is_some() {
+            return Vec::new();
+        }
+
+        let detection = detect_search(query);
+
+        match detection {
+            SearchDetection::Triggered { provider, query } => {
+                // User explicitly triggered a provider (e.g., "!g rust")
+                vec![SearchItem::new(provider, query)]
+            }
+            SearchDetection::Fallback { query } => {
+                // Show all providers if we have no other matches
+                if !has_matches && !query.is_empty() {
+                    get_providers()
+                        .into_iter()
+                        .map(|provider| SearchItem::new(provider, query.clone()))
+                        .collect()
+                } else {
+                    Vec::new()
+                }
+            }
+            SearchDetection::None => Vec::new(),
+        }
+    }
+
     /// Check if a calculator item is currently shown.
     pub fn has_calculator(&self) -> bool {
         self.calculator_item.is_some()
     }
 
-    /// Get the item at a global row index, accounting for calculator at position 0.
+    /// Get the item at a global row index, accounting for calculator and search items.
     fn get_item_at(&self, row: usize) -> Option<ListItem> {
+        let mut offset = 0;
+
+        // Calculator is at position 0
         if self.calculator_item.is_some() {
             if row == 0 {
-                // Return calculator as ListItem
                 return self.calculator_item.clone().map(ListItem::Calculator);
             }
-            // Offset by 1 for non-calculator items
-            self.filtered_indices
-                .get(row - 1)
-                .and_then(|&idx| self.items.get(idx))
-                .cloned()
-        } else {
-            self.filtered_indices
-                .get(row)
-                .and_then(|&idx| self.items.get(idx))
-                .cloned()
+            offset += 1;
         }
+
+        // Search items come after calculator
+        let search_count = self.search_items.len();
+        if row < offset + search_count {
+            let search_idx = row - offset;
+            return self
+                .search_items
+                .get(search_idx)
+                .cloned()
+                .map(ListItem::Search);
+        }
+        offset += search_count;
+
+        // Regular filtered items come after search
+        self.filtered_indices
+            .get(row - offset)
+            .and_then(|&idx| self.items.get(idx))
+            .cloned()
     }
 
     /// Convert section + row to global selected index.
@@ -212,11 +274,13 @@ impl ItemListDelegate {
     /// Convert global index to section + row.
     pub fn global_to_section_row(&self, global: usize) -> (usize, usize) {
         let has_calc = self.calculator_item.is_some();
+        let has_search = self.section_info.search_count > 0;
         let has_windows = self.section_info.window_count > 0;
         let has_commands = self.section_info.command_count > 0;
 
         let calc_offset = if has_calc { 1 } else { 0 };
-        let window_end = calc_offset + self.section_info.window_count;
+        let search_end = calc_offset + self.section_info.search_count;
+        let window_end = search_end + self.section_info.window_count;
         let command_end = window_end + self.section_info.command_count;
 
         // Determine which section and compute the row within it
@@ -229,9 +293,16 @@ impl ItemListDelegate {
             section_idx += 1;
         }
 
+        if has_search {
+            if global < search_end {
+                return (section_idx, global - calc_offset);
+            }
+            section_idx += 1;
+        }
+
         if has_windows {
             if global < window_end {
-                return (section_idx, global - calc_offset);
+                return (section_idx, global - search_end);
             }
             section_idx += 1;
         }
@@ -250,6 +321,7 @@ impl ItemListDelegate {
     pub fn clear_query(&mut self) {
         self.query.clear();
         self.calculator_item = None;
+        self.search_items.clear();
         self.filter_items();
     }
 
@@ -270,7 +342,8 @@ impl ItemListDelegate {
 
     pub fn filtered_count(&self) -> usize {
         let calc_count = if self.calculator_item.is_some() { 1 } else { 0 };
-        self.filtered_indices.len() + calc_count
+        let search_count = self.search_items.len();
+        self.filtered_indices.len() + calc_count + search_count
     }
 
     pub fn selected_index(&self) -> Option<usize> {
@@ -304,6 +377,7 @@ impl ItemListDelegate {
     /// Determine what type of section is at the given section index.
     fn section_type_at(&self, section: usize) -> SectionType {
         let has_calc = self.calculator_item.is_some();
+        let has_search = self.section_info.search_count > 0;
         let has_windows = self.section_info.window_count > 0;
         let has_commands = self.section_info.command_count > 0;
 
@@ -316,6 +390,13 @@ impl ItemListDelegate {
             current_section += 1;
         }
 
+        if has_search {
+            if section == current_section {
+                return SectionType::Search;
+            }
+            current_section += 1;
+        }
+
         if has_windows {
             if section == current_section {
                 return SectionType::Windows;
@@ -323,11 +404,10 @@ impl ItemListDelegate {
             current_section += 1;
         }
 
-        if has_commands
-            && section == current_section {
-                return SectionType::Commands;
-            }
-            // current_section += 1; // Not needed, Applications is the default
+        if has_commands && section == current_section {
+            return SectionType::Commands;
+        }
+        // current_section += 1; // Not needed, Applications is the default
 
         // Default to Applications
         SectionType::Applications
@@ -340,10 +420,16 @@ impl ItemListDelegate {
 
         match section_type {
             SectionType::Calculator => 0,
-            SectionType::Windows => calc_offset,
-            SectionType::Commands => calc_offset + self.section_info.window_count,
+            SectionType::Search => calc_offset,
+            SectionType::Windows => calc_offset + self.section_info.search_count,
+            SectionType::Commands => {
+                calc_offset + self.section_info.search_count + self.section_info.window_count
+            }
             SectionType::Applications => {
-                calc_offset + self.section_info.window_count + self.section_info.command_count
+                calc_offset
+                    + self.section_info.search_count
+                    + self.section_info.window_count
+                    + self.section_info.command_count
             }
         }
     }
@@ -354,12 +440,16 @@ impl ListDelegate for ItemListDelegate {
 
     fn sections_count(&self, _cx: &App) -> usize {
         let has_calc = self.calculator_item.is_some();
+        let has_search = self.section_info.search_count > 0;
         let has_windows = self.section_info.window_count > 0;
         let has_commands = self.section_info.command_count > 0;
         let has_apps = self.section_info.app_count > 0;
 
         let mut count = 0;
         if has_calc {
+            count += 1;
+        }
+        if has_search {
             count += 1;
         }
         if has_windows {
@@ -378,6 +468,7 @@ impl ListDelegate for ItemListDelegate {
         let section_type = self.section_type_at(section);
         match section_type {
             SectionType::Calculator => 1,
+            SectionType::Search => self.section_info.search_count,
             SectionType::Windows => self.section_info.window_count,
             SectionType::Commands => self.section_info.command_count,
             SectionType::Applications => self.section_info.app_count,
@@ -392,26 +483,27 @@ impl ListDelegate for ItemListDelegate {
     ) -> Option<impl IntoElement> {
         let section_type = self.section_type_at(section);
 
-        // Calculator section has no header
-        if section_type == SectionType::Calculator {
+        // Calculator and Search sections have no header
+        if section_type == SectionType::Calculator || section_type == SectionType::Search {
             return None;
         }
 
-        // Count how many non-calculator sections we have
+        // Count how many non-calculator, non-search sections we have
         let has_windows = self.section_info.window_count > 0;
         let has_commands = self.section_info.command_count > 0;
         let has_apps = self.section_info.app_count > 0;
-        let non_calc_section_count =
+        let non_special_section_count =
             has_windows as usize + has_commands as usize + has_apps as usize;
 
-        // Only show headers if we have multiple non-calculator sections
-        if non_calc_section_count <= 1 {
+        // Only show headers if we have multiple non-special sections
+        if non_special_section_count <= 1 {
             return None;
         }
 
         let t = theme();
         let title = match section_type {
             SectionType::Calculator => return None,
+            SectionType::Search => return None,
             SectionType::Windows => "Windows",
             SectionType::Commands => "Commands",
             SectionType::Applications => "Applications",
@@ -442,10 +534,16 @@ impl ListDelegate for ItemListDelegate {
 
         let item = if section_type == SectionType::Calculator {
             self.calculator_item.clone().map(ListItem::Calculator)?
+        } else if section_type == SectionType::Search {
+            self.search_items
+                .get(ix.row)
+                .cloned()
+                .map(ListItem::Search)?
         } else {
             let start = self.section_start_index(section_type);
             let calc_offset = if self.calculator_item.is_some() { 1 } else { 0 };
-            let filtered_idx = start - calc_offset + ix.row;
+            let search_offset = self.search_items.len();
+            let filtered_idx = start - calc_offset - search_offset + ix.row;
             let item_idx = *self.filtered_indices.get(filtered_idx)?;
             self.items.get(item_idx)?.clone()
         };

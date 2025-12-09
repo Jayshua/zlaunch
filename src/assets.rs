@@ -66,6 +66,10 @@ pub enum PhosphorIcon {
     FileText,
     FileImage,
     Image,
+    MagnifyingGlass,
+    Globe,
+    BookOpen,
+    YoutubeLogo,
 }
 
 impl PhosphorIcon {
@@ -85,6 +89,10 @@ impl PhosphorIcon {
             Self::FileText => "icons/file-text-bold.svg",
             Self::FileImage => "icons/file-image-bold.svg",
             Self::Image => "icons/image-bold.svg",
+            Self::MagnifyingGlass => "icons/magnifying-glass-bold.svg",
+            Self::Globe => "icons/globe-bold.svg",
+            Self::BookOpen => "icons/book-open-bold.svg",
+            Self::YoutubeLogo => "icons/youtube-logo-bold.svg",
         }
     }
 
@@ -104,6 +112,10 @@ impl PhosphorIcon {
             "file-text" => Some(Self::FileText),
             "file-image" => Some(Self::FileImage),
             "image" => Some(Self::Image),
+            "magnifying-glass" => Some(Self::MagnifyingGlass),
+            "globe" => Some(Self::Globe),
+            "book-open" => Some(Self::BookOpen),
+            "youtube-logo" => Some(Self::YoutubeLogo),
             _ => None,
         }
     }

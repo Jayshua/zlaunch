@@ -108,9 +108,10 @@ impl EmojiGridDelegate {
     /// Move selection left (previous item linearly).
     pub fn select_left(&mut self) {
         if let Some(idx) = self.selected_index
-            && idx > 0 {
-                self.selected_index = Some(idx - 1);
-            }
+            && idx > 0
+        {
+            self.selected_index = Some(idx - 1);
+        }
     }
 
     /// Move selection right (next item linearly).
@@ -126,9 +127,10 @@ impl EmojiGridDelegate {
     /// Confirm selection (copy emoji).
     pub fn do_confirm(&self) {
         if let Some(emoji) = self.selected_emoji()
-            && let Some(ref on_select) = self.on_select {
-                on_select(emoji);
-            }
+            && let Some(ref on_select) = self.on_select
+        {
+            on_select(emoji);
+        }
     }
 
     /// Cancel (go back).

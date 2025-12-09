@@ -2,11 +2,13 @@ mod application;
 mod base;
 mod calculator;
 mod delegate;
+mod search;
 
 pub use application::render_application;
 pub use base::{item_container, render_action_indicator, render_icon, render_text_content};
 pub use calculator::render_calculator;
 pub use delegate::ItemListDelegate;
+pub use search::render_search;
 
 use crate::assets::PhosphorIcon;
 use crate::items::ListItem;
@@ -22,6 +24,7 @@ pub fn render_item(item: &ListItem, selected: bool, row: usize) -> Stateful<Div>
         ListItem::Action(act) => render_action(act, selected, row),
         ListItem::Submenu(sub) => render_submenu(sub, selected, row),
         ListItem::Calculator(calc) => render_calculator(calc, selected, row),
+        ListItem::Search(search) => render_search(search, selected, row),
     }
 }
 

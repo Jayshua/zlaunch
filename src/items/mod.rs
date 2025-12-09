@@ -1,12 +1,14 @@
 mod action;
 mod application;
 mod calculator;
+mod search;
 mod submenu;
 mod window;
 
 pub use action::{ActionItem, ActionKind};
 pub use application::ApplicationItem;
 pub use calculator::CalculatorItem;
+pub use search::SearchItem;
 pub use submenu::{SubmenuItem, SubmenuLayout};
 pub use window::WindowItem;
 
@@ -26,6 +28,8 @@ pub enum ListItem {
     Submenu(SubmenuItem),
     /// A calculator result
     Calculator(CalculatorItem),
+    /// A web search item
+    Search(SearchItem),
 }
 
 impl ListItem {
@@ -37,6 +41,7 @@ impl ListItem {
             Self::Action(act) => &act.id,
             Self::Submenu(sub) => &sub.id,
             Self::Calculator(calc) => &calc.id,
+            Self::Search(search) => &search.id,
         }
     }
 
@@ -48,6 +53,7 @@ impl ListItem {
             Self::Action(act) => &act.name,
             Self::Submenu(sub) => &sub.name,
             Self::Calculator(calc) => &calc.expression,
+            Self::Search(search) => &search.name,
         }
     }
 
@@ -59,6 +65,7 @@ impl ListItem {
             Self::Action(act) => act.description.as_deref(),
             Self::Submenu(sub) => sub.description.as_deref(),
             Self::Calculator(calc) => Some(&calc.display_result),
+            Self::Search(_) => None,
         }
     }
 
@@ -70,6 +77,7 @@ impl ListItem {
             Self::Action(_) => None,     // Actions use icon names, not paths
             Self::Submenu(_) => None,    // Submenus use icon names, not paths
             Self::Calculator(_) => None, // Calculator uses custom icon
+            Self::Search(_) => None,     // Search uses Phosphor icons
         }
     }
 
@@ -106,19 +114,21 @@ impl ListItem {
             Self::Action(_) => "Run",
             Self::Submenu(_) => "Open",
             Self::Calculator(_) => "Copy",
+            Self::Search(_) => "Open",
         }
     }
 
     /// Get the sort priority for this item type.
     /// Lower values appear first in the list.
-    /// Calculator (0) < Windows (1) < Commands/Actions (2) < Applications (3)
+    /// Calculator (0) < Search (1) < Windows (2) < Commands/Actions (3) < Applications (4)
     pub fn sort_priority(&self) -> u8 {
         match self {
             Self::Calculator(_) => 0,
-            Self::Window(_) => 1,
-            Self::Submenu(_) => 2,
-            Self::Action(_) => 2, // Actions are grouped with Commands
-            Self::Application(_) => 3,
+            Self::Search(_) => 1,
+            Self::Window(_) => 2,
+            Self::Submenu(_) => 3,
+            Self::Action(_) => 3, // Actions are grouped with Commands
+            Self::Application(_) => 4,
         }
     }
 
@@ -126,6 +136,7 @@ impl ListItem {
     pub fn section_name(&self) -> &'static str {
         match self {
             Self::Calculator(_) => "Calculator",
+            Self::Search(_) => "Search",
             Self::Window(_) => "Windows",
             Self::Submenu(_) => "Commands",
             Self::Action(_) => "Commands", // Actions are grouped with Commands
@@ -163,5 +174,11 @@ impl From<SubmenuItem> for ListItem {
 impl From<CalculatorItem> for ListItem {
     fn from(item: CalculatorItem) -> Self {
         Self::Calculator(item)
+    }
+}
+
+impl From<SearchItem> for ListItem {
+    fn from(item: SearchItem) -> Self {
+        Self::Search(item)
     }
 }

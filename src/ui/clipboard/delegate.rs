@@ -83,9 +83,10 @@ impl ClipboardListDelegate {
     /// Move selection up (previous item).
     pub fn select_up(&mut self) {
         if let Some(idx) = self.selected_index
-            && idx > 0 {
-                self.selected_index = Some(idx - 1);
-            }
+            && idx > 0
+        {
+            self.selected_index = Some(idx - 1);
+        }
     }
 
     /// Move selection down (next item).
@@ -101,9 +102,10 @@ impl ClipboardListDelegate {
     /// Confirm selection (copy to clipboard).
     pub fn do_confirm(&self) {
         if let Some(item) = self.selected_item()
-            && let Some(ref on_select) = self.on_select {
-                on_select(item);
-            }
+            && let Some(ref on_select) = self.on_select
+        {
+            on_select(item);
+        }
     }
 
     /// Cancel (go back).

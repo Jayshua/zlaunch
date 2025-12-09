@@ -120,6 +120,15 @@ impl LauncherView {
                         tracing::warn!(%e, "Failed to execute action");
                     }
                 }
+                ListItem::Search(search) => {
+                    // Open the search URL in the default browser
+                    if let Err(e) = std::process::Command::new("xdg-open")
+                        .arg(&search.url)
+                        .spawn()
+                    {
+                        tracing::warn!(%e, "Failed to open search URL");
+                    }
+                }
                 _ => {}
             }
             on_hide_for_confirm();
