@@ -90,8 +90,8 @@ impl KwinCompositor {
         }
 
         // Try to get window classes with wmctrl -lx
-        if let Ok(output) = Command::new("wmctrl").args(["-lx"]).output() {
-            if output.status.success() {
+        if let Ok(output) = Command::new("wmctrl").args(["-lx"]).output()
+            && output.status.success() {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 for line in stdout.lines() {
                     let parts: Vec<&str> = line.split_whitespace().collect();
@@ -107,7 +107,6 @@ impl KwinCompositor {
                     }
                 }
             }
-        }
 
         Ok(windows)
     }

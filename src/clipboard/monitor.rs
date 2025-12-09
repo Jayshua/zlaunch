@@ -221,13 +221,12 @@ fn read_clipboard_content() -> Result<(), Box<dyn std::error::Error>> {
     let mut clipboard = Clipboard::new()?;
 
     // Try to get text first
-    if let Ok(text) = clipboard.get_text() {
-        if !text.is_empty() {
+    if let Ok(text) = clipboard.get_text()
+        && !text.is_empty() {
             debug!("Adding text to clipboard history: {} chars", text.len());
             data::add_item(ClipboardContent::Text(text));
             return Ok(());
         }
-    }
 
     // Try to get image
     if let Ok(image) = clipboard.get_image() {

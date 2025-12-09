@@ -24,11 +24,10 @@ pub fn add_item(content: ClipboardContent) {
     let history = history.as_mut().expect("Clipboard history not initialized");
 
     // Don't add duplicate consecutive items
-    if let Some(last) = history.front() {
-        if is_same_content(&last.content, &content) {
+    if let Some(last) = history.front()
+        && is_same_content(&last.content, &content) {
             return;
         }
-    }
 
     let item = ClipboardItem::new(content);
     history.push_front(item);

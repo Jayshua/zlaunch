@@ -567,10 +567,8 @@ fn parse_file_url(text: &str) -> Option<PathBuf> {
     let text = text.trim();
 
     // Handle file:// URLs
-    if text.starts_with("file://") {
+    if let Some(path_str) = text.strip_prefix("file://") {
         // Remove the file:// prefix
-        let path_str = &text[7..];
-
         // URL decode the path (handle %20 for spaces, etc.)
         if let Ok(decoded) = urlencoding::decode(path_str) {
             return Some(PathBuf::from(decoded.as_ref()));
@@ -643,9 +641,7 @@ fn parse_color(text: &str) -> Option<Color> {
     let text = text.trim();
 
     // Try hex format: #RGB, #RRGGBB, #RRGGBBAA
-    if text.starts_with('#') {
-        let hex = &text[1..];
-
+    if let Some(hex) = text.strip_prefix('#') {
         if hex.len() == 3 {
             // #RGB -> #RRGGBB
             let r = u8::from_str_radix(&hex[0..1].repeat(2), 16).ok()?;

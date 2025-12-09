@@ -17,6 +17,12 @@ pub struct EmojiGridDelegate {
     on_back: Option<Arc<dyn Fn() + Send + Sync>>,
 }
 
+impl Default for EmojiGridDelegate {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EmojiGridDelegate {
     pub fn new() -> Self {
         let emojis = all_emojis();
@@ -46,7 +52,7 @@ impl EmojiGridDelegate {
 
     /// Get the number of rows needed for the current filtered emojis.
     fn row_count(&self) -> usize {
-        (self.filtered_indices.len() + self.columns - 1) / self.columns
+        self.filtered_indices.len().div_ceil(self.columns)
     }
 
     /// Get emojis for a specific row.
@@ -101,11 +107,10 @@ impl EmojiGridDelegate {
 
     /// Move selection left (previous item linearly).
     pub fn select_left(&mut self) {
-        if let Some(idx) = self.selected_index {
-            if idx > 0 {
+        if let Some(idx) = self.selected_index
+            && idx > 0 {
                 self.selected_index = Some(idx - 1);
             }
-        }
     }
 
     /// Move selection right (next item linearly).
@@ -120,11 +125,10 @@ impl EmojiGridDelegate {
 
     /// Confirm selection (copy emoji).
     pub fn do_confirm(&self) {
-        if let Some(emoji) = self.selected_emoji() {
-            if let Some(ref on_select) = self.on_select {
+        if let Some(emoji) = self.selected_emoji()
+            && let Some(ref on_select) = self.on_select {
                 on_select(emoji);
             }
-        }
     }
 
     /// Cancel (go back).

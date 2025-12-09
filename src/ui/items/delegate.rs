@@ -323,12 +323,11 @@ impl ItemListDelegate {
             current_section += 1;
         }
 
-        if has_commands {
-            if section == current_section {
+        if has_commands
+            && section == current_section {
                 return SectionType::Commands;
             }
             // current_section += 1; // Not needed, Applications is the default
-        }
 
         // Default to Applications
         SectionType::Applications

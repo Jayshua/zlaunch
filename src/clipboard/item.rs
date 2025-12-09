@@ -84,9 +84,9 @@ impl ClipboardItem {
 
     /// Check if this item is a text file that can be previewed.
     pub fn is_previewable_file(&self) -> bool {
-        if let ClipboardContent::FilePaths(paths) = &self.content {
-            if paths.len() == 1 {
-                if let Some(ext) = paths[0].extension().and_then(|e| e.to_str()) {
+        if let ClipboardContent::FilePaths(paths) = &self.content
+            && paths.len() == 1
+                && let Some(ext) = paths[0].extension().and_then(|e| e.to_str()) {
                     return matches!(
                         ext,
                         "txt"
@@ -104,8 +104,6 @@ impl ClipboardItem {
                             | "sh"
                     );
                 }
-            }
-        }
         false
     }
 }
