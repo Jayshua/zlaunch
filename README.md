@@ -4,7 +4,7 @@ A fast application launcher and window switcher for Linux Wayland, built with
 [GPUI](https://github.com/zed-industries/zed).
 
 <p align="center">
-https://github.com/user-attachments/assets/e11cd113-798d-4b8c-84d6-36c0ff0dc3d6
+<video src="https://github.com/user-attachments/assets/e11cd113-798d-4b8c-84d6-36c0ff0dc3d6" width="80%" controls></video>
 </p>
 
 ## Features
