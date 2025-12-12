@@ -384,8 +384,9 @@ impl LauncherView {
         self.theme_mode_handler = None;
         self._theme_preview_subscription = None;
 
-        // Reload the configured theme (in case it was saved)
-        self.current_theme = crate::config::load_configured_theme();
+        // Reload the configured theme and update the global cache
+        crate::ui::theme::sync_theme_from_config();
+        self.current_theme = crate::ui::theme::theme();
 
         self.reset_search(window, cx);
         self.input_state.update(cx, |input, cx| {
